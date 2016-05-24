@@ -1,0 +1,5 @@
+# Private configuration
+secrets.json
+
+# Eclipse project files
+.project
