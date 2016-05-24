@@ -1,0 +1,16 @@
+#!/bin/bash
+
+SCRIPT_DIR="$(cd "$(dirname "$([ `readlink "$0"` ] && echo "`readlink "$0"`" || echo "$0")")"; pwd -P)"
+
+if [ -f "$SCRIPT_DIR/secrets.json" ]; then
+  cd "$SCRIPT_DIR"
+  packer build -var-file=secrets.json bootstrap_concourse.json
+else
+  echo "
+ Note:
+ 
+ Before you can build this Concourse AMI, 
+ you must copy secrets.default.json into secrets.json (ignored by Git)
+ and fill in your access key and secret key 
+"
+fi
