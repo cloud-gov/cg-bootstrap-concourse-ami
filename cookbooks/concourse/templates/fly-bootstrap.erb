@@ -1,0 +1,35 @@
+#!/bin/bash
+
+BASE_DIR="/opt/concourse"
+
+USERNAME=$(curl http://169.254.169.254/latest/user-data | $BASE_DIR/bin/extract_yaml_key username <%= @ci_default_username %>)
+PASSWORD=$(curl http://169.254.169.254/latest/user-data | $BASE_DIR/bin/extract_yaml_key password <%= @ci_default_password %>)
+PIPELINE=$(curl http://169.254.169.254/latest/user-data | $BASE_DIR/bin/extract_yaml_key pipeline)
+
+if [ -z "$PIPELINE" ]; then
+	echo "No pipeline supplied in user-data. Exiting."
+	exit 0;
+fi
+
+PIPELINE_FILE=$(mktemp)
+
+echo -e "$PIPELINE" > $PIPELINE_FILE
+
+# wait for server to be up, upstart shouldn't start us until ready, but concourse still has startup time
+echo "Waiting for concourse to start..."
+until nc -z localhost 8080; do sleep 1; done
+
+# login
+NAME="local"
+
+$BASE_DIR/bin/fly login -t $NAME -c http://localhost:8080 -u $USERNAME -p $PASSWORD
+
+# wait for concourse to be ready (i.e. have workers)
+echo "Waiting for worker to be ready..."
+until $BASE_DIR/bin/fly -t $NAME workers 2>&1| grep linux; do sleep 1; done
+
+# install pipeline
+$BASE_DIR/bin/fly -t $NAME sp -p bootstrap -c $PIPELINE_FILE  -n
+
+# start it
+$BASE_DIR/bin/fly -t $NAME up -p bootstrap

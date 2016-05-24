@@ -1,9 +1,16 @@
+db_password = shell_out("tr -cd '[:alnum:]' < /dev/urandom | fold -w30 | head -n1").stdout.strip
+concourse_binary_release = shell_out("curl https://api.github.com/repos/concourse/concourse/releases | grep browser_download_url | grep 'linux_amd64' | head -n 1 | cut -d'\"' -f4").stdout.strip
+
+ci_default_username = "ci"
+ci_default_password = "walt"
+
+execute "apt-get-update" do
+  command "apt-get update && apt-get update"
+  action :run
+end
+
 package 'linux-generic-lts-vivid'
 package 'postgresql'
-
-db_password = shell_out("tr -cd '[:alnum:]' < /dev/urandom | fold -w30 | head -n1").stdout.strip
-
-concourse_binary_release = shell_out("curl https://api.github.com/repos/concourse/concourse/releases | grep browser_download_url | grep 'linux_amd64' | head -n 1 | cut -d'\"' -f4").stdout.strip
 
 service 'concourse-web' do
   action [:stop]
@@ -87,6 +94,8 @@ template '/opt/concourse/bin/concourse-web' do
   mode 0755
   source 'web.erb'
   variables({
+    :ci_default_username => ci_default_username,
+    :ci_default_password => ci_default_password,
     :db_password => db_password
   })
 end
@@ -96,10 +105,35 @@ template '/etc/init/concourse-web.conf' do
   source 'web-init.erb'
 end
 
+template '/opt/concourse/bin/fly-bootstrap' do
+  mode 0755
+  source 'fly-bootstrap.erb'
+  variables({
+    :ci_default_username => ci_default_username,
+    :ci_default_password => ci_default_password,
+  })
+end
+
+template '/etc/init/concourse-bootstrap-fly.conf' do
+  mode 0644
+  source 'fly-init.erb'
+end
+
 service 'concourse-worker' do
   action [:enable, :start]
 end
 
 service 'concourse-web' do
   action [:enable, :start]
+end
+
+service 'concourse-bootstrap-fly' do
+  action [:enable]
+end
+
+remote_file '/opt/concourse/bin/fly' do
+  source 'http://localhost:8080/api/v1/cli?arch=amd64&platform=linux'
+  headers("Authorization" => "Basic #{ Base64.encode64("#{ci_default_username}:#{ci_default_password}").gsub("\n", "") }" )
+  mode 0755
+  action :create
 end
