@@ -1,0 +1,24 @@
+set -e
+
+BASE_DIR="/opt/concourse"
+
+# get our hostname from the userdata / metadata service
+. $BASE_DIR/bin/_userdata.sh
+
+TMPDIR=$(mktemp -d)
+
+openssl req \
+  -days 1 \
+  -newkey rsa:2048 \
+  -nodes \
+  -new \
+  -x509 \
+  -subj "/CN=$HOSTNAME" \
+  -keyout $TMPDIR/server.key \
+  -out $TMPDIR/server.crt
+
+cat $TMPDIR/server.* > /etc/ssl/self_signed.pem
+
+rm $TMPDIR/server.* && rmdir $TMPDIR
+
+ENABLED=1

@@ -10,6 +10,9 @@ class TestStringMethods(unittest.TestCase):
   TEST_YAML_GOOD = """
   foo: bar
   baz: bork
+  pipeline:
+    this: is a
+    nested: structure
   """
 
   TEST_YAML_BLANK = ''
@@ -26,6 +29,11 @@ class TestStringMethods(unittest.TestCase):
     """A value can be extracted from valid yaml"""
     assert extract_key(self.TEST_YAML_GOOD, 'foo') == 'bar'
 
+  def test_nested(self):
+    """nested values are returned as a full yaml document"""
+    y = yaml.load(self.TEST_YAML_GOOD)
+    assert extract_key(self.TEST_YAML_GOOD, 'pipeline') == yaml.dump(y.get('pipeline'))
+
   def test_extract_missing(self):
     """A default is returned if the key is not found in valid yaml"""
     assert extract_key(self.TEST_YAML_GOOD, 'bar', 'hello') == 'hello'
@@ -35,7 +43,7 @@ class TestStringMethods(unittest.TestCase):
     assert extract_key(self.TEST_YAML_BLANK, 'bar', 'hello') == 'hello'
 
   def test_extract_bad(self):
-    """A default is returned if blank is provided"""
+    """A default is returned if invalid yaml is provided"""
     assert extract_key(self.TEST_NOT_YAML, 'bar', 'hello') == 'hello'
   
 
@@ -54,7 +62,12 @@ def extract_key(content, kk, default=None):
 
   try:
     y = yaml.load(content)
-    return y.get(kk, default)
+    value = y.get(kk, default)
+
+    if type(value) is dict:
+      return yaml.dump(value)
+    else:
+      return value
   except:
     return default
 

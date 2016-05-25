@@ -35,13 +35,14 @@ Once the process finishes a new AMI will be ready for use in the selected region
 
 The AMI created by this template supports setting the concourse basic-auth username and password via [user-data](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html) when the instance is boooted. 
 
-This is done by providing a simple YAML document that contains `username` and `password` keys as the instance's user-data:
+This is done by providing a simple YAML document that contains `username` and `password` keys as the instance's user-data. The `hostname` key is optional, but if set will be passed as `external-url` to concourse.  If `hostname` is not provided, then the `public-hostname` from the metadata service will be used
 
 ```
 # This is a sample YAML file that will configure the concourse username and password
 
 username: admin
 password: swordfish
+hostname: ci.example.com
 ```
 
 #### Accessing Concourse
