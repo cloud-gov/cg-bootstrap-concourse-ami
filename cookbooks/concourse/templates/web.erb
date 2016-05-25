@@ -2,15 +2,7 @@
 
 BASE_DIR="/opt/concourse"
 
-export AWS_HOSTNAME=$(curl http://169.254.169.254/latest/meta-data/public-hostname)
-
-USERNAME=$(curl http://169.254.169.254/latest/user-data | $BASE_DIR/bin/extract_yaml_key username <%= @ci_default_username %>)
-PASSWORD=$(curl http://169.254.169.254/latest/user-data | $BASE_DIR/bin/extract_yaml_key password <%= @ci_default_password %>)
-HOSTNAME=$(curl http://169.254.169.254/latest/user-data | $BASE_DIR/bin/extract_yaml_key hostname $AWS_HOSTNAME)
-
-# setup port 80 forwarding
-export RULE="PREROUTING -i eth0 -p tcp --dport 80 -j REDIRECT --to-port 8080"
-iptables -t nat -C $RULE || iptables -t nat -A $RULE
+source $BASE_DIR/bin/_userdata.sh
 
 $BASE_DIR/bin/concourse web \
     --bind-port 8080 \
@@ -20,5 +12,5 @@ $BASE_DIR/bin/concourse web \
     --tsa-host-key $BASE_DIR/etc/host_key \
     --tsa-authorized-keys $BASE_DIR/etc/worker_key.pub \
     --postgres-data-source='postgres://atc:<%= @db_password %>@127.0.0.1:5432/atc?sslmode=disable' \
-    --external-url http://$HOSTNAME \
+    --external-url https://$HOSTNAME \
 | tee /var/log/concourse-web.log

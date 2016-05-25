@@ -4,6 +4,10 @@ concourse_binary_release = shell_out("curl https://api.github.com/repos/concours
 ci_default_username = "ci"
 ci_default_password = "walt"
 
+file '/etc/apt/sources.list.d/backports.list' do
+  content 'deb http://archive.ubuntu.com/ubuntu trusty-backports main universe'
+end
+
 execute "apt-get-update" do
   command "apt-get update && apt-get update"
   action :run
@@ -11,6 +15,11 @@ end
 
 package 'linux-generic-lts-vivid'
 package 'postgresql'
+
+# make sure we get HAProxy 1.5 from backports for proper SSL support
+apt_package "haproxy" do
+  default_release "trusty-backports"
+end
 
 service 'concourse-web' do
   action [:stop]
@@ -74,6 +83,15 @@ cookbook_file '/opt/concourse/bin/extract_yaml_key' do
   mode 0755
 end
 
+template '/opt/concourse/bin/_userdata.sh' do
+  mode 0755
+  source 'userdata.erb'
+  variables({
+    :ci_default_username => ci_default_username,
+    :ci_default_password => ci_default_password,
+  })
+end
+
 remote_file '/opt/concourse/bin/concourse' do
   source concourse_binary_release
   mode 0755
@@ -94,8 +112,6 @@ template '/opt/concourse/bin/concourse-web' do
   mode 0755
   source 'web.erb'
   variables({
-    :ci_default_username => ci_default_username,
-    :ci_default_password => ci_default_password,
     :db_password => db_password
   })
 end
@@ -108,10 +124,6 @@ end
 template '/opt/concourse/bin/fly-bootstrap' do
   mode 0755
   source 'fly-bootstrap.erb'
-  variables({
-    :ci_default_username => ci_default_username,
-    :ci_default_password => ci_default_password,
-  })
 end
 
 template '/etc/init/concourse-bootstrap-fly.conf' do
@@ -128,7 +140,7 @@ service 'concourse-web' do
 end
 
 service 'concourse-bootstrap-fly' do
-  action [:enable]
+  action :enable
 end
 
 remote_file '/opt/concourse/bin/fly' do
@@ -136,4 +148,18 @@ remote_file '/opt/concourse/bin/fly' do
   headers("Authorization" => "Basic #{ Base64.encode64("#{ci_default_username}:#{ci_default_password}").gsub("\n", "") }" )
   mode 0755
   action :create
+end
+
+template '/etc/haproxy/haproxy.cfg' do
+  mode 0644
+  source 'haproxy.erb'
+end
+
+# generate a self-signed cert each time haproxy starts
+template '/etc/default/haproxy' do
+  source 'certgen.erb'
+end
+
+service 'haproxy' do
+  action :enable
 end
