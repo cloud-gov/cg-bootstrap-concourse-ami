@@ -46,4 +46,4 @@ hostname: ci.example.com
 ```
 
 #### Accessing Concourse
-Concourse runs on `port 80`. Ensure the instance is placed into a security group that allows access to this port.
+Concourse runs on `port 443` using https protocol. Ensure the instance is placed into a security group that allows access to this port.
