@@ -1,5 +1,6 @@
 # Private configuration
 secrets.json
+credentials.yml
 
 # Eclipse project files
 .project
