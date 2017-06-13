@@ -8,16 +8,11 @@ jobs:
     - get: concourse-release
       trigger: true
     - get: pipeline-tasks
-  - task: generate-var-file
-    file: pipeline-tasks/write_file.yml
-    params:
-      FILE_NAME: write_file/secrets.json
-      CONTENT: |
-        {"aws_access_key": {{aws_access_key_id}}, "aws_secret_key": {{aws_secret_access_key}}, "aws_region": {{aws_default_region}}}
   - put: build-cg-bootstrap-concourse-ami
+    tags:
+    - iaas
     params:
       template: cg-bootstrap-concourse-ami/bootstrap_concourse.json
-      var_file: write_file/secrets.json
   on_failure:
     put: slack
     params:
@@ -52,8 +47,6 @@ resources:
 - name: build-cg-bootstrap-concourse-ami
   type: packer
   source:
-    aws_access_key_id: {{aws_access_key_id}}
-    aws_secret_access_key: {{aws_secret_access_key}}
     region: {{aws_default_region}}
 
 - name: pipeline-tasks
@@ -71,7 +64,7 @@ resource_types:
 - name: packer
   type: docker-image
   source:
-    repository: jdub/packer-resource
+    repository: 18fgsa/packer-resource
 
 - name: slack-notification
   type: docker-image
