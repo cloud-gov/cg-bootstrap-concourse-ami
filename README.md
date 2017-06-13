@@ -4,8 +4,7 @@ A packer template and associated resources for creating an AMI that runs a stand
 
 ### Setup
 
-To build an AMI with this template first create a secrets.json file with the following contents:
-
+To build an AMI with this template first create a secrets.json file with the following contents or run this on an EC2 VM with an [appropriate instance profile](https://www.packer.io/docs/builders/amazon.html#using-an-iam-instance-profile)
 ```
 {
 	"aws_access_key": "your-aws-access-key",
